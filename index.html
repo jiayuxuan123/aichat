@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI 对话 - 前端搜索演示</title>
+    <style>
+        /* 基础样式 */
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5; /* 浅灰色背景 */
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 顶部导航栏 */
+        .header {
+            background-color: #ffffff;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .settings-button {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #007aff; /* iOS 蓝色 */
+            cursor: pointer;
+            padding: 0 10px;
+        }
+
+        /* 对话区域 */
+        .chat-container {
+            flex-grow: 1;
+            padding: 15px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch; /* 提高 iOS 滚动流畅度 */
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 15px;
+            align-items: flex-end;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.ai {
+            justify-content: flex-start;
+        }
+
+        .message-bubble {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 20px;
+            line-height: 1.5;
+            word-wrap: break-word;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            font-size: 15px;
+        }
+
+        .message.user .message-bubble {
+            background-color: #007aff; /* iOS 蓝色 */
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.ai .message-bubble {
+            background-color: #ffffff;
+            color: #333;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message-bubble pre {
+            white-space: pre-wrap; /* 保持代码格式并换行 */
+            word-wrap: break-word;
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 8px;
+            border-radius: 8px;
+            font-family: 'SF Mono', 'Consolas', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            overflow-x: auto; /* 允许代码块横向滚动 */
+        }
+
+        .message-bubble code {
+            font-family: 'SF Mono', 'Consolas', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
+        }
+
+        /* 输入区域 */
+        .input-area {
+            display: flex;
+            padding: 10px 15px;
+            background-color: #ffffff;
+            border-top: 1px solid #f0f0f0;
+            align-items: center;
+        }
+
+        .input-area textarea {
+            flex-grow: 1;
+            border: 1px solid #e0e0e0;
+            border-radius: 25px;
+            padding: 10px 15px;
+            font-size: 16px;
+            resize: none;
+            max-height: 100px;
+            overflow-y: auto;
+            margin-right: 10px;
+            outline: none;
+            -webkit-appearance: none; /* 移除 iOS 默认样式 */
+        }
+
+        .input-area button {
+            background-color: #007aff;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            -webkit-appearance: none; /* 移除 iOS 默认样式 */
+        }
+
+        .input-area button:active {
+            background-color: #0056b3;
+        }
+
+        /* 设置弹窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            cursor: pointer;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            font-size: 22px;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group textarea {
+            width: calc(100% - 20px);
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            -webkit-appearance: none; /* 移除 iOS 默认样式 */
+        }
+
+        .form-group input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none; /* 隐藏默认滑块样式 */
+            height: 8px;
+            background: #d3d3d3;
+            border-radius: 5px;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+        }
+
+        .form-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #007aff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            -webkit-appearance: none; /* 移除 iOS 默认样式 */
+        }
+
+        .modal-buttons .cancel-button {
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+        }
+
+        .modal-buttons .cancel-button:active {
+            background-color: #e0e0e0;
+        }
+
+        .modal-buttons .save-button {
+            background-color: #007aff;
+            color: white;
+            border: none;
+        }
+
+        .modal-buttons .save-button:active {
+            background-color: #0056b3;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 600px) {
+            .header {
+                padding: 12px;
+            }
+
+            .header h1 {
+                font-size: 18px;
+            }
+
+            .chat-container {
+                padding: 10px;
+            }
+
+            .message-bubble {
+                padding: 10px 14px;
+                font-size: 14px;
+            }
+
+            .input-area {
+                padding: 8px 12px;
+            }
+
+            .input-area textarea {
+                font-size: 15px;
+                padding: 8px 12px;
+            }
+
+            .input-area button {
+                padding: 8px 16px;
+                font-size: 15px;
+            }
+
+            .modal-content {
+                width: 95%;
+                padding: 15px;
+            }
+
+            .modal-content h2 {
+                font-size: 20px;
+            }
+
+            .form-group input[type="text"],
+            .form-group input[type="number"],
+            .form-group textarea {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>AI 对话</h1>
+        <button class="settings-button" onclick="openSettingsModal()">⚙️</button>
+    </div>
+
+    <div class="chat-container" id="chatContainer">
+        </div>
+
+    <div class="input-area">
+        <textarea id="messageInput" placeholder="输入消息..." rows="1"></textarea>
+        <button onclick="sendMessage()">发送</button>
+    </div>
+
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeSettingsModal()">&times;</span>
+            <h2>设置</h2>
+
+            <div class="form-group">
+                <label for="deepseekApiKey">DeepSeek API 密钥:</label>
+                <input type="text" id="deepseekApiKey" placeholder="sk-xxxxxx" value="">
+            </div>
+
+            <div class="form-group">
+                <label for="customApiUrl">自定义 AI 地址 (可选):</label>
+                <input type="text" id="customApiUrl" placeholder="例如: https://api.openai.com/v1/chat/completions">
+            </div>
+
+            <div class="form-group">
+                <label for="modelName">模型名称:</label>
+                <input type="text" id="modelName" value="deepseek-chat">
+            </div>
+
+            <div class="form-group">
+                <label for="temperature">温度: <span id="temperatureValue">0.7</span></label>
+                <input type="range" id="temperature" min="0" max="2" step="0.01" value="0.7">
+            </div>
+
+            <div class="form-group">
+                <label for="maxTokens">最大 Token 数:</label>
+                <input type="number" id="maxTokens" min="1" value="1024">
+            </div>
+
+            <div class="form-group">
+                <label for="systemPrompt">系统提示:</label>
+                <textarea id="systemPrompt" rows="3" placeholder="给 AI 设置一个角色或行为模式"></textarea>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="cancel-button" onclick="closeSettingsModal()">取消</button>
+                <button class="save-button" onclick="saveSettings()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chatContainer');
+        const messageInput = document.getElementById('messageInput');
+        const settingsModal = document.getElementById('settingsModal');
+        const deepseekApiKeyInput = document.getElementById('deepseekApiKey');
+        const customApiUrlInput = document.getElementById('customApiUrl');
+        const modelNameInput = document.getElementById('modelName');
+        const temperatureInput = document.getElementById('temperature');
+        const temperatureValueSpan = document.getElementById('temperatureValue');
+        const maxTokensInput = document.getElementById('maxTokens');
+        const systemPromptInput = document.getElementById('systemPrompt');
+
+        // 默认设置
+        let settings = {
+            deepseekApiKey: '',
+            customApiUrl: '',
+            modelName: 'deepseek-chat',
+            temperature: 0.7,
+            maxTokens: 1024,
+            systemPrompt: '你是一个乐于助人的AI助手。你可以使用工具来回答问题。当用户需要搜索最新信息或详细资料时，请优先使用 `search_duckduckgo` 工具获取，而不是直接回答。' // 进一步引导AI使用DuckDuckGo工具
+        };
+
+        // 从 localStorage 加载设置
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('aiChatSettings');
+            if (savedSettings) {
+                settings = JSON.parse(savedSettings);
+                deepseekApiKeyInput.value = settings.deepseekApiKey || '';
+                customApiUrlInput.value = settings.customApiUrl || '';
+                modelNameInput.value = settings.modelName || 'deepseek-chat';
+                temperatureInput.value = settings.temperature;
+                temperatureValueSpan.textContent = settings.temperature;
+                maxTokensInput.value = settings.maxTokens;
+                systemPromptInput.value = settings.systemPrompt || '';
+            }
+        }
+
+        // 保存设置到 localStorage
+        function saveSettings() {
+            settings.deepseekApiKey = deepseekApiKeyInput.value.trim();
+            settings.customApiUrl = customApiUrlInput.value.trim();
+            settings.modelName = modelNameInput.value.trim();
+            settings.temperature = parseFloat(temperatureInput.value);
+            settings.maxTokens = parseInt(maxTokensInput.value);
+            settings.systemPrompt = systemPromptInput.value.trim();
+            localStorage.setItem('aiChatSettings', JSON.stringify(settings));
+            closeSettingsModal();
+            addMessage('系统', '设置已保存！', 'ai');
+        }
+
+        // 监听温度滑块变化
+        temperatureInput.addEventListener('input', () => {
+            temperatureValueSpan.textContent = temperatureInput.value;
+        });
+
+        // 页面加载时加载设置
+        window.onload = loadSettings;
+
+        // 打开设置弹窗
+        function openSettingsModal() {
+            // 重新从 settings 对象加载值，确保显示当前生效的设置
+            deepseekApiKeyInput.value = settings.deepseekApiKey || '';
+            customApiUrlInput.value = settings.customApiUrl || '';
+            modelNameInput.value = settings.modelName || 'deepseek-chat';
+            temperatureInput.value = settings.temperature;
+            temperatureValueSpan.textContent = settings.temperature;
+            maxTokensInput.value = settings.maxTokens;
+            systemPromptInput.value = settings.systemPrompt || '';
+
+            settingsModal.style.display = 'flex';
+        }
+
+        // 关闭设置弹窗
+        function closeSettingsModal() {
+            settingsModal.style.display = 'none';
+        }
+
+        // 动态调整输入框高度
+        messageInput.addEventListener('input', () => {
+            messageInput.style.height = 'auto';
+            messageInput.style.height = messageInput.scrollHeight + 'px';
+        });
+
+        // 自动滚动到底部
+        function scrollToBottom() {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // 添加消息到对话框
+        function addMessage(sender, text, type) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', type);
+            const bubbleElement = document.createElement('div');
+            bubbleElement.classList.add('message-bubble');
+
+            // 渲染 markdown, 简化处理，只处理代码块
+            let renderedText = text.replace(/```(.*?)```/gs, (match, code) => {
+                const languageMatch = code.match(/^(\w+)\s*\n/);
+                const language = languageMatch ? languageMatch[1] : '';
+                const codeContent = languageMatch ? code.substring(languageMatch[0].length) : code;
+                return `<pre><code class="language-${language}">${codeContent.trim()}</code></pre>`;
+            }).replace(/`(.*?)`/g, (match, inlineCode) => {
+                return `<code>${inlineCode}</code>`;
+            });
+
+
+            bubbleElement.innerHTML = renderedText;
+            messageElement.appendChild(bubbleElement);
+            chatContainer.appendChild(messageElement);
+            scrollToBottom();
+        }
+
+        // 模拟 `complete` 函数，将工具执行结果返回给 AI 模型
+        // 在实际 AI 集成中，这个函数会把结果发送回 AI API
+        const exports = {}; // 模拟 exports 对象，用于挂载工具函数
+        let complete = async (toolCallResult) => {
+            console.log("Tool Function Complete:", toolCallResult);
+            let aiResponseText = '';
+
+            if (toolCallResult.success) {
+                if (toolCallResult.data && toolCallResult.data.action === 'open_url') {
+                    // 对于打开URL的工具，AI的响应可以简单提示用户已打开
+                    aiResponseText = `已在浏览器中为您打开关于 "${toolCallResult.data.query}" 的搜索结果。`;
+                } else if (toolCallResult.data && toolCallResult.data.api_results) {
+                    // 对于 API 搜索，展示模拟的 API 结果
+                    const results = toolCallResult.data.api_results.organic_results;
+                    if (results && results.length > 0) {
+                        aiResponseText = `以下是关于 "${toolCallResult.data.query}" 的模拟搜索结果：\n\n`;
+                        results.slice(0, 3).forEach((item, index) => { // 只显示前3条
+                            aiResponseText += `${index + 1}. **${item.title}**\n   ${item.snippet}\n   [${item.link}]\n\n`;
+                        });
+                        aiResponseText += `\n（这是模拟的API搜索结果，非真实数据。）`;
+                    } else {
+                        aiResponseText = `未找到关于 "${toolCallResult.data.query}" 的模拟API搜索结果。`;
+                    }
+                } else if (toolCallResult.data && toolCallResult.data.duckduckgo_results) {
+                    // 对于 DuckDuckGo 搜索，展示解析后的结果
+                    const results = toolCallResult.data.duckduckgo_results;
+                    if (results && results.length > 0) {
+                        aiResponseText = `以下是关于 "${toolCallResult.data.query}" 的 DuckDuckGo 搜索结果：\n\n`;
+                        results.slice(0, 3).forEach((item, index) => { // 只显示前3条
+                            aiResponseText += `${index + 1}. **${item.title || '无标题'}**\n   ${item.snippet || '无摘要'}\n   [${item.link || '无链接'}]\n\n`;
+                        });
+                    } else {
+                        aiResponseText = `未找到关于 "${toolCallResult.data.query}" 的 DuckDuckGo 搜索结果。`;
+                    }
+                }
+                else {
+                    aiResponseText = `工具执行成功：${toolCallResult.message || '无详细信息'}`;
+                }
+            } else {
+                aiResponseText = `工具执行失败：${toolCallResult.message || '未知错误'}`;
+            }
+
+            // 替换占位符消息
+            const thinkingMessage = chatContainer.lastChild;
+            if (thinkingMessage && thinkingMessage.classList.contains('ai') && thinkingMessage.querySelector('.message-bubble').textContent === '思考中...') {
+                thinkingMessage.remove();
+            }
+            addMessage('AI', aiResponseText, 'ai');
+
+            // 如果 DeepSeek API 确实支持工具调用，你需要在 `sendMessage` 后续逻辑中，
+            // 将 `toolCallResult` 返回给 AI API，让 AI 根据工具结果继续生成回复。
+            // 但在这个纯前端模拟中，我们直接在这里生成 AI 响应。
+        };
+
+
+        /* METADATA
+        {
+          name: frontend_web_search
+          description: 提供前端可实现的网页搜索功能，包括直接跳转、模拟API搜索和通过Vercel代理的DuckDuckGo搜索。
+          
+          tools: [
+            {
+              name: open_web_search
+              description: 在浏览器新标签页中打开指定搜索引擎的搜索结果页面。适用于需要用户直接查看完整搜索结果的场景。
+              parameters: [
+                {
+                  name: query
+                  description: 搜索查询关键词
+                  type: string
+                  required: true
+                },
+                {
+                  name: platform
+                  description: 要使用的搜索引擎平台，可选值包括"bing", "baidu", "google"。默认为"baidu"。
+                  type: string
+                  required: false
+                }
+              ]
+            },
+            {
+              name: search_via_api
+              description: 通过模拟公共API（如SerpAPI）进行网页搜索，并在当前页面内返回结构化结果。此功能需要API Key且有调用次数限制。
+              parameters: [
+                {
+                  name: query
+                  description: 搜索查询关键词
+                  type: string
+                  required: true
+                }
+              ]
+            },
+            {
+              name: search_duckduckgo
+              description: 通过Vercel代理使用DuckDuckGo的非官方API进行网页搜索。此方法可绕过浏览器CORS限制，直接在应用内展示搜索结果摘要。
+              parameters: [
+                {
+                  name: query
+                  description: 搜索查询关键词
+                  type: string
+                  required: true
+                }
+              ]
+            }
+          ]
+          
+          category: NETWORK
+        }
+        */
+
+        const frontend_web_search = (function () {
+            /**
+             * 参数类型转换函数 - 将输入参数转换为期望的数据类型
+             * (此函数从您原先的代码中复制，未修改)
+             */
+            function convertParamTypes(params, paramTypes) {
+                if (!params || !paramTypes) return params;
+                const result = {};
+                for (const key in params) {
+                    if (params[key] === undefined || params[key] === null) {
+                        result[key] = params[key];
+                        continue;
+                    }
+                    const expectedType = paramTypes[key];
+                    if (!expectedType) {
+                        result[key] = params[key];
+                        continue;
+                    }
+                    const value = params[key];
+                    try {
+                        switch (expectedType.toLowerCase()) {
+                            case 'number':
+                                if (typeof value === 'string') {
+                                    if (value.includes('.')) {
+                                        result[key] = parseFloat(value);
+                                    } else {
+                                        result[key] = parseInt(value, 10);
+                                    }
+                                    if (isNaN(result[key])) {
+                                        throw new Error(`参数 ${key} 无法转换为数字: ${value}`);
+                                    }
+                                } else {
+                                    result[key] = value;
+                                }
+                                break;
+                            case 'boolean':
+                                if (typeof value === 'string') {
+                                    const lowerValue = value.toLowerCase();
+                                    if (lowerValue === 'true' || lowerValue === '1' || lowerValue === 'yes') {
+                                        result[key] = true;
+                                    } else if (lowerValue === 'false' || lowerValue === '0' || lowerValue === 'no') {
+                                        result[key] = false;
+                                    } else {
+                                        throw new Error(`参数 ${key} 无法转换为布尔值: ${value}`);
+                                    }
+                                } else {
+                                    result[key] = value;
+                                }
+                                break;
+                            case 'array':
+                                if (typeof value === 'string') {
+                                    try {
+                                        result[key] = JSON.parse(value);
+                                        if (!Array.isArray(result[key])) {
+                                            throw new Error('解析结果不是数组');
+                                        }
+                                    } catch (e) {
+                                        throw new Error(`参数 ${key} 无法转换为数组: ${value}`);
+                                    }
+                                } else {
+                                    result[key] = value;
+                                }
+                                break;
+                            case 'object':
+                                if (typeof value === 'string') {
+                                    try {
+                                        result[key] = JSON.parse(value);
+                                        if (Array.isArray(result[key]) || typeof result[key] !== 'object') {
+                                            throw new Error('解析结果不是对象');
+                                        }
+                                    } catch (e) {
+                                        throw new Error(`参数 ${key} 无法转换为对象: ${value}`);
+                                    }
+                                } else {
+                                    result[key] = value;
+                                }
+                                break;
+                            default:
+                                result[key] = value;
+                        }
+                    } catch (error) {
+                        console.error(`参数类型转换错误: ${error.message}`);
+                        result[key] = value;
+                    }
+                }
+                return result;
+            }
+
+            /**
+             * 包装函数 - 统一处理所有搜索函数的返回结果
+             * @param func 原始函数
+             * @param params 函数参数
+             */
+            async function search_wrap(func, params) {
+                const successMessage = `成功执行${func.name || '搜索'}操作`;
+                const failMessage = `${func.name || '搜索'}操作失败`;
+                try {
+                    console.log(`开始执行函数: ${func.name || '匿名函数'}`);
+                    console.log(`参数:`, JSON.stringify(params, null, 2));
+
+                    const result = await func(params);
+                    console.log(`函数 ${func.name || '匿名函数'} 执行结果:`, JSON.stringify(result, null, 2));
+
+                    complete({
+                        success: true,
+                        message: successMessage,
+                        data: result // 将函数返回的直接数据作为 data 传递
+                    });
+                } catch (error) {
+                    console.error(`函数 ${func.name || '匿名函数'} 执行失败!`);
+                    console.error(`错误信息: ${error.message}`);
+                    console.error(`错误堆栈: ${error.stack}`);
+                    complete({
+                        success: false,
+                        message: `${failMessage}: ${error.message}`,
+                        error_stack: error.stack
+                    });
+                }
+            }
+
+            /**
+             * 在浏览器新标签页中打开指定搜索引擎的搜索结果页面。
+             * @param {Object} params - 包含搜索查询和平台的参数对象
+             * @returns {Object} 包含操作成功信息的对象
+             */
+            async function open_web_search(params) {
+                const { query, platform = 'baidu' } = params;
+                if (!query || query.trim() === "") {
+                    throw new Error("请提供有效的搜索查询");
+                }
+
+                let url;
+                switch (platform.toLowerCase()) {
+                    case 'bing':
+                        url = `https://cn.bing.com/search?q=${encodeURIComponent(query)}`;
+                        break;
+                    case 'google':
+                        url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+                        break;
+                    case 'baidu':
+                    default:
+                        url = `https://www.baidu.com/s?wd=${encodeURIComponent(query)}`;
+                        break;
+                }
+
+                window.open(url, '_blank'); // 在新标签页打开URL
+
+                return {
+                    action: 'open_url',
+                    platform: platform,
+                    query: query,
+                    url: url,
+                    message: `已在新标签页中打开 ${platform} 关于 "${query}" 的搜索结果。`
+                };
+            }
+
+            /**
+             * 通过模拟公共API（如SerpAPI）进行网页搜索，并在当前页面内返回结构化结果。
+             * 此功能需要API Key且有调用次数限制。
+             * @param {Object} params - 包含搜索查询的参数对象
+             * @returns {Promise<Object>} 包含模拟搜索结果的Promise
+             */
+            async function search_via_api(params) {
+                const { query } = params;
+                if (!query || query.trim() === "") {
+                    throw new Error("请提供有效的搜索查询");
+                }
+
+                // ⚠️ 警告：请在这里替换为您的真实 SerpAPI 或其他公共搜索API Key
+                // 真实环境中，API Key 不应直接暴露在前端，应通过后端代理。
+                const API_KEY = "YOUR_SERPAPI_API_KEY"; // <<<<<<< 请替换为你的真实 API Key
+                // const API_URL = `https://serpapi.com/search?engine=google&q=${encodeURIComponent(query)}&api_key=${API_KEY}`;
+                // 由于没有真实API Key，我们这里模拟一个响应
+                const simulatedApiResults = {
+                    search_parameters: {
+                        q: query,
+                        engine: "google",
+                        gl: "cn",
+                        hl: "zh"
+                    },
+                    organic_results: [
+                        {
+                            title: `模拟结果1: ${query} 的最新动态`,
+                            snippet: `这是关于 "${query}" 的第一条模拟搜索结果摘要。它可能包含最新的发展和关键信息。`,
+                            link: `https://example.com/result1?q=${encodeURIComponent(query)}`
+                        },
+                        {
+                            title: `模拟结果2: ${query} 的权威指南`,
+                            snippet: `第二条模拟结果，提供关于 "${query}" 的全面指南和深入分析。`,
+                            link: `https://example.com/result2?q=${encodeURIComponent(query)}`
+                        },
+                        {
+                            title: `模拟结果3: ${query} 社区讨论`,
+                            snippet: `第三条模拟结果，来自某个论坛或社区，讨论了 "${query}" 相关的问题和解决方案。`,
+                            link: `https://example.com/result3?q=${encodeURIComponent(query)}`
+                        }
+                    ],
+                    // 其他可能的API数据...
+                };
+
+                console.warn("注意：search_via_api 正在使用模拟数据。要使用真实数据，请替换 API_KEY 并取消模拟相关代码。");
+                await new Promise(resolve => setTimeout(resolve, 1000)); // 模拟网络延迟
+
+                return {
+                    query: query,
+                    api_results: simulatedApiResults,
+                    message: `已通过模拟API获取关于 "${query}" 的搜索结果。`
+                };
+            }
+
+            /**
+             * 使用DuckDuckGo的非官方API进行网页搜索。
+             * 此功能通过Vercel代理工作，可绕过浏览器CORS策略限制，直接在应用内展示搜索结果摘要。
+             * @param {Object} params - 包含搜索查询的参数对象
+             * @returns {Promise<Object>} 包含DuckDuckGo搜索结果的Promise
+             */
+            async function search_duckduckgo(params) {
+                const { query } = params;
+                if (!query || query.trim() === "") {
+                    throw new Error("请提供有效的搜索查询");
+                }
+
+                // 核心：通过Vercel的代理路径访问DuckDuckGo API
+                // Vercel会根据vercel.json将 /api/duckduckgo 转发到 https://api.duckduckgo.com/
+                const duckduckgoProxyUrl = `/api/duckduckgo?q=${encodeURIComponent(query)}&format=json&pretty=1&no_redirect=1`;
+                
+                addMessage('AI', `正在通过 DuckDuckGo (Vercel 代理) 搜索 "${query}"...`, 'ai');
+
+                try {
+                    const response = await fetch(duckduckgoProxyUrl, {
+                        method: 'GET',
+                        // credentials: 'omit', // 确保不发送 cookies
+                        // mode: 'cors' // 浏览器会自动处理代理后的CORS
+                    });
+
+                    if (!response.ok) {
+                        // Vercel代理转发后，如果DuckDuckGo API返回非200状态码，这里会捕获
+                        throw new Error(`DuckDuckGo API 通过代理返回错误状态码: ${response.status} ${response.statusText}`);
+                    }
+
+                    let data;
+                    let rawText;
+                    try {
+                        // 尝试解析为 JSON
+                        data = await response.json(); 
+                    } catch (e) {
+                        // 如果不是标准JSON，则作为纯文本处理
+                        rawText = await response.text();
+                        console.warn("DuckDuckGo API 响应不是标准 JSON，尝试文本解析。", rawText.substring(0, 500)); // 打印部分原始文本
+                        // 尝试从原始文本中提取关键信息
+                        const titleMatch = rawText.match(/"Heading"\s*:\s*"(.*?)"/);
+                        const abstractMatch = rawText.match(/"Abstract"\s*:\s*"(.*?)"/);
+                        const urlMatch = rawText.match(/"AbstractURL"\s*:\s*"(.*?)"/);
+                        
+                        const resultsFromText = [];
+                        if (titleMatch || abstractMatch) {
+                            resultsFromText.push({
+                                title: titleMatch ? titleMatch[1] : `DuckDuckGo 结果`,
+                                snippet: abstractMatch ? abstractMatch[1] : `未找到摘要，请访问链接获取详情。`,
+                                link: urlMatch ? urlMatch[1] : `https://duckduckgo.com/?q=${encodeURIComponent(query)}`
+                            });
+                        }
+                        
+                        if (resultsFromText.length > 0) {
+                             return {
+                                query: query,
+                                duckduckgo_results: resultsFromText,
+                                message: `成功从 DuckDuckGo 获取到部分数据（文本解析）。`
+                            };
+                        } else {
+                            throw new Error("DuckDuckGo API 返回内容无法解析为有效结果（非JSON且无法文本解析）。");
+                        }
+                    }
+
+                    // 如果成功解析为 JSON，则进一步处理
+                    const results = [];
+                    // 优先处理Instant Answer (如果存在)
+                    if (data.AbstractText) {
+                        results.push({ 
+                            title: data.Heading || `DuckDuckGo 即时答案：${query}`,
+                            snippet: data.AbstractText,
+                            link: data.AbstractURL || `https://duckduckgo.com/?q=${encodeURIComponent(query)}`
+                        });
+                    }
+                    
+                    // 然后处理相关话题
+                    if (data.RelatedTopics && Array.isArray(data.RelatedTopics)) {
+                        data.RelatedTopics.forEach(topic => {
+                            // 过滤掉不完整的Topic或自身Topic
+                            if (topic.Text && topic.FirstURL && topic.Result && topic.Result.includes('ddg_wikipedia_zero')) {
+                                results.push({
+                                    title: topic.Text,
+                                    snippet: topic.Text, 
+                                    link: topic.FirstURL
+                                });
+                            } else if (topic.Text && topic.FirstURL) {
+                                // 简单的网页结果
+                                results.push({
+                                    title: topic.Text,
+                                    snippet: topic.Text,
+                                    link: topic.FirstURL
+                                });
+                            }
+                        });
+                    }
+                    
+                    // 如果结果依然为空，尝试从其他字段提取
+                    if (results.length === 0 && data.Answer) {
+                         results.push({
+                            title: data.AnswerType ? `${data.AnswerType}: ${data.Answer}` : `DuckDuckGo 回答: ${data.Answer}`,
+                            snippet: data.Answer,
+                            link: data.AbstractURL || `https://duckduckgo.com/?q=${encodeURIComponent(query)}`
+                         });
+                    }
+
+
+                    if (results.length === 0) {
+                        throw new Error("DuckDuckGo API 返回内容为空或无法提取有效结果。");
+                    }
+
+                    return {
+                        query: query,
+                        duckduckgo_results: results,
+                        message: `已通过 DuckDuckGo (Vercel 代理) 获取关于 "${query}" 的搜索结果。`
+                    };
+
+                } catch (error) {
+                    console.error('DuckDuckGo API 调用失败 (通过Vercel代理):', error);
+                    throw new Error(`DuckDuckGo 搜索失败: ${error.message}`);
+                }
+            }
+
+
+            return {
+                open_web_search: async (params) => {
+                    await search_wrap(open_web_search, params);
+                },
+                search_via_api: async (params) => {
+                    await search_wrap(search_via_api, params);
+                },
+                search_duckduckgo: async (params) => {
+                    await search_wrap(search_duckduckgo, params);
+                }
+            };
+        })();
+
+        // 将工具函数挂载到 exports 对象，模拟AI模型可访问的环境
+        exports.open_web_search = frontend_web_search.open_web_search;
+        exports.search_via_api = frontend_web_search.search_via_api;
+        exports.search_duckduckgo = frontend_web_search.search_duckduckgo; // 新增 DuckDuckGo 工具
+
+        // 模拟 AI 模型的工具调用逻辑
+        // 在真实集成中，这部分是 AI 服务（如 DeepSeek）返回的 function_call 响应
+        async function handleToolCall(toolName, toolArguments) {
+            addMessage('AI', `调用工具：${toolName}(${JSON.stringify(toolArguments)})`, 'ai');
+            addMessage('AI', '工具执行中...', 'ai');
+
+            // 根据工具名称调用相应的函数
+            if (exports[toolName]) {
+                await exports[toolName](toolArguments);
+            } else {
+                complete({
+                    success: false,
+                    message: `未找到工具: ${toolName}`
+                });
+            }
+        }
+
+
+        // 发送消息
+        async function sendMessage() {
+            const messageText = messageInput.value.trim();
+            if (messageText === '') return;
+
+            addMessage('用户', messageText, 'user');
+            messageInput.value = '';
+            messageInput.style.height = 'auto'; // 重置高度
+
+            // 检查 API 密钥是否设置
+            const apiKey = settings.deepseekApiKey;
+            if (!apiKey && !settings.customApiUrl) {
+                addMessage('AI', '请在设置中输入 DeepSeek API 密钥或自定义 AI 地址。', 'ai');
+                return;
+            }
+
+            const apiUrl = settings.customApiUrl || 'https://api.deepseek.com/chat/completions';
+            const model = settings.modelName;
+            const temperature = settings.temperature;
+            const maxTokens = settings.maxTokens;
+            const systemPrompt = settings.systemPrompt;
+
+            const messages = [{ role: 'user', content: messageText }];
+            if (systemPrompt) {
+                messages.unshift({ role: 'system', content: systemPrompt });
+            }
+
+            // 在这里添加一个占位符，表示AI正在思考
+            addMessage('AI', '思考中...', 'ai');
+
+            try {
+                const requestBody = {
+                    model: model,
+                    messages: messages,
+                    temperature: temperature,
+                    max_tokens: maxTokens,
+                    stream: false, // 禁用流式传输，简化处理
+                    // 添加 tools 定义，告知 DeepSeek 模型可以使用这些工具
+                    tools: [
+                        {
+                            type: "function",
+                            function: {
+                                name: "open_web_search",
+                                description: "在浏览器新标签页中打开指定搜索引擎的搜索结果页面。适用于需要用户直接查看完整搜索结果的场景。",
+                                parameters: {
+                                    type: "object",
+                                    properties: {
+                                        query: { type: "string", description: "搜索查询关键词" },
+                                        platform: { type: "string", description: "要使用的搜索引擎平台，可选值包括\"bing\", \"baidu\", \"google\"。默认为\"baidu\"。", enum: ["bing", "baidu", "google"] }
+                                    },
+                                    required: ["query"]
+                                }
+                            }
+                        },
+                        {
+                            type: "function",
+                            function: {
+                                name: "search_via_api",
+                                description: "通过模拟公共API（如SerpAPI）进行网页搜索，并在当前页面内返回结构化结果。此功能需要API Key且有调用次数限制。",
+                                parameters: {
+                                    type: "object",
+                                    properties: {
+                                        query: { type: "string", description: "搜索查询关键词" }
+                                    },
+                                    required: ["query"]
+                                }
+                            }
+                        },
+                        { // 新增 DuckDuckGo 工具的定义
+                            type: "function",
+                            function: {
+                                name: "search_duckduckgo",
+                                description: "通过Vercel代理使用DuckDuckGo的非官方API进行网页搜索。此方法可绕过浏览器CORS限制，直接在应用内展示搜索结果摘要。",
+                                parameters: {
+                                    type: "object",
+                                    properties: {
+                                        query: { type: "string", description: "搜索查询关键词" }
+                                    },
+                                    required: ["query"]
+                                }
+                            }
+                        }
+                    ]
+                };
+
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API 请求失败: ${response.status} ${response.statusText} - ${errorData.message || '未知错误'}`);
+                }
+
+                const data = await response.json();
+                const choice = data.choices[0];
+
+                if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
+                    // 如果 AI 决定调用工具
+                    const toolCall = choice.message.tool_calls[0]; // 假设只调用一个工具
+                    const toolName = toolCall.function.name;
+                    const toolArguments = JSON.parse(toolCall.function.arguments);
+                    
+                    // 移除占位符消息
+                    const thinkingMessage = chatContainer.lastChild;
+                    if (thinkingMessage && thinkingMessage.classList.contains('ai') && thinkingMessage.querySelector('.message-bubble').textContent === '思考中...') {
+                        thinkingMessage.remove();
+                    }
+
+                    // 调用工具函数 (此处会调用上面的 `handleToolCall`，进而调用 `exports` 中的工具)
+                    await handleToolCall(toolName, toolArguments);
+
+                } else if (choice.message.content) {
+                    // 如果 AI 直接返回文本回复
+                    const aiResponse = choice.message.content;
+                    // 移除占位符消息
+                    const thinkingMessage = chatContainer.lastChild;
+                    if (thinkingMessage && thinkingMessage.classList.contains('ai') && thinkingMessage.querySelector('.message-bubble').textContent === '思考中...') {
+                        thinkingMessage.remove();
+                    }
+                    addMessage('AI', aiResponse, 'ai');
+                } else {
+                    // 没有文本内容也没有工具调用
+                    const thinkingMessage = chatContainer.lastChild;
+                    if (thinkingMessage && thinkingMessage.classList.contains('ai') && thinkingMessage.querySelector('.message-bubble').textContent === '思考中...') {
+                        thinkingMessage.remove();
+                    }
+                    addMessage('AI', 'AI 没有返回内容。', 'ai');
+                }
+
+            } catch (error) {
+                console.error('API 请求出错:', error);
+                const thinkingMessage = chatContainer.lastChild;
+                if (thinkingMessage && thinkingMessage.classList.contains('ai') && thinkingMessage.querySelector('.message-bubble').textContent === '思考中...') {
+                    thinkingMessage.remove(); // 移除占位符
+                }
+                addMessage('AI', `发生错误: ${error.message}`, 'ai');
+            }
+        }
+
+        // 允许回车发送消息，Shift+回车换行
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
