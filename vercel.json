@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/duckduckgo",
+      "destination": "https://api.duckduckgo.com/"
+    }
+  ]
+}
